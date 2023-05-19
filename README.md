@@ -2,7 +2,7 @@
 
 [![Python 3.6](https://img.shields.io/badge/python-3.6%20%2B-blue.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-MIT-brown.svg)](https://raw.githubusercontent.com/ricardorodrigues-ca/zoom-recording-downloader/master/LICENSE)
 
-**Zoom Recording Downloader** is a cross-platform Python script that uses Zoom's API (v2) to download and organize all cloud recordings from a Zoom account onto local storage.
+**Zoom Recording Downloader** is a cross-platform Python script that uses Zoom's API (v2) to download and organize all cloud recordings from a Zoom account onto local storage. This update replaces JWT authencation with OAuth.
 
 ## Screenshot ##
 ![screenshot](screenshot.png)
@@ -19,7 +19,7 @@ $ pip3 install -r requirements.txt
 
 ## Usage ##
 
-_Attention: You will require a [Zoom Developer account](https://marketplace.zoom.us/) in order to create a [JWT app](https://marketplace.zoom.us/docs/guides/build/jwt-app) with your token_
+_Attention: You will require a [Zoom Developer account](https://marketplace.zoom.us/) in order to create a [Server-to-Server app](https://developers.zoom.us/docs/internal-apps/)
 
 Create a file called **appenv.py** with a variable called `JWT_TOKEN` that contains the JSON Web Token from your JWT app:
 
