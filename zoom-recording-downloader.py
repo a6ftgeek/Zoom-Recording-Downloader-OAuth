@@ -1,47 +1,66 @@
 #!/usr/bin/env python3
 
-# Program Name: zoom-recording-downloader.py
+# Program Name: Zoom-Recording-Downloader-OAuth.py
 # Description:  Zoom Recording Downloader is a cross-platform Python script
 #               that uses Zoom's API (v2) to download and organize all
 #               cloud recordings from a Zoom account onto local storage.
-#               This Python script uses the JSON Web Token (JWT)
+#               This Python script has been updated to use the OAuth
 #               method of accessing the Zoom API
 # Created:      2020-04-26
+# Modified:     2023-05-18
 # Author:       Ricardo Rodrigues
-# Website:      https://github.com/ricardorodrigues-ca/zoom-recording-downloader
-# Forked from:  https://gist.github.com/danaspiegel/c33004e52ffacb60c24215abf8301680
+# Modified by:  Tony Fuqua
+# Website:      https://github.com/a6ftgeek/Zoom-Recording-Downloader-OAuth/tree/master      
+# Forked from:  https://github.com/ricardorodrigues-ca/zoom-recording-downloader
 
 # Import TQDM progress bar library
-from tqdm import tqdm
+from tqdm.auto import tqdm
 # Import app environment variables
-from appenv import JWT_TOKEN
+#from appenv import JWT_TOKEN
 from sys import exit
 from signal import signal, SIGINT
 from dateutil.parser import parse
 import datetime
 from datetime import date
-from dateutil import relativedelta
+from dateutil.relativedelta import relativedelta
 from datetime import date, timedelta
 import itertools
 import requests
 import time
 import sys
 import os
-APP_VERSION = "2.1"
+import base64
+
+APP_VERSION = "4.0"
+
+account_id = ''
+client_id = ''
+client_secret = ''
+b64_cics = ''
+
+cics = client_id + ':' + client_secret
+cics = cics.encode('ascii')
+b64_cics = base64.b64encode(cics)
+b64_cics = b64_cics.decode("ascii")
+
+response = requests.post('https://zoom.us/oauth/token',data={'grant_type':'account_credentials','account_id':account_id},headers={'Host':'zoom.us','Authorization':'Basic '+b64_cics})
+oauth_token = response.json()['access_token']
+
 
 # JWT_TOKEN now lives in appenv.py
-ACCESS_TOKEN = 'Bearer ' + JWT_TOKEN
+ACCESS_TOKEN = 'Bearer ' + oauth_token
 AUTHORIZATION_HEADER = {'Authorization': ACCESS_TOKEN}
 
 API_ENDPOINT_USER_LIST = 'https://api.zoom.us/v2/users'
 
-# Start date now split into YEAR, MONTH, and DAY variables (Within 6 month range)
-RECORDING_START_YEAR = 2022
-RECORDING_START_MONTH = 1
-RECORDING_START_DAY = 1
+# Start date now split into YEAR, MONTH, and DAY variables 
+start_date = date.today() + relativedelta(months=-12)
+RECORDING_START_YEAR = int(str(start_date.strftime("%Y")))
+RECORDING_START_MONTH = int(str(start_date.strftime("%m")))
+RECORDING_START_DAY = int(str(start_date.strftime("%d")))
 RECORDING_END_DATE = date.today()
 # RECORDING_END_DATE = date(2021, 8, 1)
-DOWNLOAD_DIRECTORY = 'downloads'
+DOWNLOAD_DIRECTORY = ''
 COMPLETED_MEETING_IDS_LOG = 'completed-downloads.log'
 COMPLETED_MEETING_IDS = set()
 
@@ -75,12 +94,8 @@ def get_credentials(host_id, page_number, rec_start_date):
 
 def get_user_ids():
     # get total page count, convert to integer, increment by 1
-    response = requests.get(url=API_ENDPOINT_USER_LIST,
-                            headers=AUTHORIZATION_HEADER)
-    if not response.ok:
-        print(response)
-        print('Is your JWT still valid?')
-        exit(1)
+    response = requests.get(url=API_ENDPOINT_USER_LIST, headers=AUTHORIZATION_HEADER)
+    print(response)
     page_data = response.json()
     total_pages = int(page_data['page_count']) + 1
 
@@ -101,12 +116,33 @@ def get_user_ids():
 
 def format_filename(recording, file_type, file_extension, recording_type, recording_id):
     uuid = recording['uuid']
-    topic = recording['topic'].replace('/', '&')
-    rec_type = recording_type.replace("_", " ").title()
-    meeting_time = parse(recording['start_time']).strftime('%Y.%m.%d - %I.%M %p UTC')
-    return '{} - {} - {}.{}'.format(
-        meeting_time, topic+" - "+rec_type, recording_id, file_extension.lower()),'{} - {}'.format(topic, meeting_time)
+    topic = recording['topic'].replace('/', '_')
+    rec_type = recording_type.replace(" ", "_").title()
+    meeting_time = parse(recording['start_time'])
+    filename = '{} - {} UTC - {} - {}.{}'.format(meeting_time.strftime('%Y-%m-%d'), meeting_time.strftime('%I-%M %p '), topic+"-"+rec_type, recording_id, file_extension.lower())
+    filename = filename.replace(',','')
+    #filename = filename.replace(' ', '')
+    filename = filename.replace('|', '')
+    filename = filename.replace('__','_')
+    filename = filename.replace(':','')
+    filename = filename.replace('/','-')
+    filename = filename.replace('  ',' ')
+    return filename
 
+def format_foldername(recording):
+    topic = recording['topic'].replace('/', '_')
+    topic = topic.replace('|', '')
+    topic = topic. replace('-','')
+    #topic = topic.replace(' ','_')
+    meeting_time = parse(recording['start_time'])
+    foldername = str(meeting_time.strftime('%Y-%m-%d %I-%M_%p ')) + topic
+    #foldername = foldername.replace(' ','')
+    foldername = foldername.replace('-','_')
+    foldername = foldername.replace('__','_')
+    foldername = foldername.replace(',','')
+    foldername = foldername.replace(':','_')
+    foldername = foldername.replace('  ', ' ')
+    return foldername
 
 def get_downloads(recording):
     downloads = []
@@ -122,7 +158,7 @@ def get_downloads(recording):
         else:
             recording_type = download['file_type']
         # must append JWT token to download_url
-        download_url = download['download_url'] + "?access_token=" + JWT_TOKEN
+        download_url = download['download_url'] + "?access_token=" + oauth_token
         downloads.append((file_type, file_extension, download_url, recording_type, recording_id))
     return downloads
 
@@ -147,7 +183,7 @@ def perdelta(start, end, delta):
 def list_recordings(email):
     recordings = []
 
-    for start, end in perdelta(date(RECORDING_START_YEAR, RECORDING_START_MONTH, RECORDING_START_DAY), RECORDING_END_DATE, timedelta(days=30)):
+    for start, end in perdelta(date(RECORDING_START_YEAR, RECORDING_START_MONTH, RECORDING_START_DAY), RECORDING_END_DATE, timedelta(days=360)):
         post_data = get_recordings(email, 300, start, end)
         response = requests.get(url=API_ENDPOINT_RECORDING_LIST(
             email), headers=AUTHORIZATION_HEADER, params=post_data)
@@ -160,6 +196,7 @@ def download_recording(download_url, email, filename, foldername):
     dl_dir = os.sep.join([DOWNLOAD_DIRECTORY, foldername])
     full_filename = os.sep.join([dl_dir, filename])
     os.makedirs(dl_dir, exist_ok=True)
+    print("Download URL: " + download_url)
     response = requests.get(download_url, stream=True)
 
     # total size in bytes.
@@ -174,7 +211,7 @@ def download_recording(download_url, email, filename, foldername):
             for chunk in response.iter_content(block_size):
                 t.update(len(chunk))
                 fd.write(chunk)  # write video chunk to disk
-        t.close()
+        t._instances.clear()
         return True
     except Exception as e:
         # if there was some exception, print the error and return False
@@ -184,7 +221,7 @@ def download_recording(download_url, email, filename, foldername):
 
 def load_completed_meeting_ids():
     try:
-        with open(COMPLETED_MEETING_IDS_LOG, 'r') as fd:
+        with open(COMPLETED_MEETING_IDS_LOG, 'r+') as fd:
             for line in fd:
                 COMPLETED_MEETING_IDS.add(line.strip())
     except FileNotFoundError:
@@ -237,10 +274,9 @@ def main():
     users = get_user_ids()
 
     for email, user_id, first_name, last_name in users:
-        print(color.BOLD + "\nGetting recording list for {} {} ({})".format(first_name,
-                                                                            last_name, email) + color.END)
+        print(color.BOLD + "\nGetting recording list for {} {} ({})".format(first_name, last_name, email) + color.END)
         # wait n.n seconds so we don't breach the API rate limit
-        # time.sleep(0.1)
+        time.sleep(0.1)
         recordings = list_recordings(user_id)
         total_count = len(recordings)
         print("==> Found {} recordings".format(total_count))
@@ -255,8 +291,10 @@ def main():
             downloads = get_downloads(recording)
             for file_type, file_extension, download_url, recording_type, recording_id in downloads:
                 if recording_type != 'incomplete':
-                    filename, foldername = format_filename(
+                    filename = format_filename(
                         recording, file_type, file_extension, recording_type, recording_id)
+                    foldername = format_foldername(recording)
+                    print(foldername)
                     # truncate URL to 64 characters
                     truncated_url = download_url[0:64] + "..."
                     print("==> Downloading ({} of {}) as {}: {}: {}".format(
