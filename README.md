@@ -12,8 +12,8 @@
 _Attention: You will need [Python 3.6](https://www.python.org/downloads/) or greater_
 
 ```sh
-$ git clone https://github.com/ricardorodrigues-ca/zoom-recording-downloader
-$ cd zoom-recording-downloader
+$ git clone https://github.com/a6ftgeek/Zoom-Recording-Downloader-OAuth
+$ cd Zoom-Recording-Downloader-OAuth
 $ pip3 install -r requirements.txt
 ```
 
