@@ -1,4 +1,4 @@
-# zoom-recording-downloader
+# Zoom-Recording-Downloader-OAuth
 
 [![Python 3.6](https://img.shields.io/badge/python-3.6%20%2B-blue.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-MIT-brown.svg)](https://raw.githubusercontent.com/ricardorodrigues-ca/zoom-recording-downloader/master/LICENSE)
 
@@ -9,7 +9,7 @@
 
 ## Installation ##
 
-_Attention: You will need [Python 3.6](https://www.python.org/downloads/) or greater_
+Attention: You will need [Python 3.6](https://www.python.org/downloads/) or greater_
 
 ```sh
 $ git clone https://github.com/a6ftgeek/Zoom-Recording-Downloader-OAuth
@@ -46,5 +46,5 @@ Open the **zoom-recording-downloader.py** file using your editor of choice, and 
 Run command:
 
 ```sh
-python3 zoom-recording-downloader.py
+python3 Zoom-Recording-Downloader-OAuth.py
 ```
