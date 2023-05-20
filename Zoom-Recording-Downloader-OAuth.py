@@ -47,7 +47,7 @@ response = requests.post('https://zoom.us/oauth/token',data={'grant_type':'accou
 oauth_token = response.json()['access_token']
 
 
-# JWT_TOKEN now lives in appenv.py
+# oauth_token is now requested from user
 ACCESS_TOKEN = 'Bearer ' + oauth_token
 AUTHORIZATION_HEADER = {'Authorization': ACCESS_TOKEN}
 
